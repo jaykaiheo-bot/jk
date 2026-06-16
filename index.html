@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장보기 어플</title>
+<style>
+    body, input, button, table, div, span, th, td {
+        font-family: 'Malgun Gothic', sans-serif;
+        font-size: 16px; /* 모든 글자 크기 동일하게 설정 */
+    }
+    body {
+        padding: 20px;
+        background-color: #f4f4f9;
+    }
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .input-group {
+        margin-bottom: 15px;
+    }
+    .input-group label {
+        display: inline-block;
+        width: 80px;
+        font-weight: bold;
+    }
+    .input-group input {
+        padding: 5px;
+        width: calc(100% - 100px);
+        box-sizing: border-box;
+    }
+    button {
+        padding: 8px 15px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #0056b3;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        word-break: keep-all; /* 글자 깨짐 방지 */
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+        white-space: nowrap; /* 줄바꿈 방지 */
+    }
+    th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    .summary {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        font-weight: bold;
+        line-height: 1.6;
+    }
+    .action-btn {
+        padding: 4px 8px;
+        margin: 0 2px;
+    }
+    .edit-btn { background-color: #28a745; }
+    .delete-btn { background-color: #dc3545; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div style="margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+        <label for="totalBudget" style="font-weight: bold;">총 예산 입력 (원): </label>
+        <input type="number" id="totalBudget" placeholder="예: 50000" oninput="calculate()">
+    </div>
+
+    <div class="input-group">
+        <label for="itemName">품목명</label>
+        <input type="text" id="itemName" placeholder="예: 우유">
+    </div>
+    <div class="input-group">
+        <label for="itemPrice">가격 (원)</label>
+        <input type="number" id="itemPrice" placeholder="예: 5000">
+    </div>
+    <button onclick="addItem()" id="addBtn">목록에 추가</button>
+    <input type="hidden" id="editIndex" value="-1">
+
+    <table>
+        <thead>
+            <tr>
+                <th>품목</th>
+                <th>가격</th>
+                <th>관리</th>
+            </tr>
+        </thead>
+        <tbody id="itemList">
+            </tbody>
+    </table>
+
+    <div class="summary">
+        총 예산: <span id="displayBudget">0</span> 원<br>
+        현재 합계 금액: <span id="displayTotal">0</span> 원<br>
+        잔액: <span id="displayBalance" style="color: blue;">0</span> 원
+    </div>
+</div>
+
+<script>
+    let items = [];
+
+    function addItem() {
+        const name = document.getElementById('itemName').value;
+        const price = parseInt(document.getElementById('itemPrice').value) || 0;
+        const editIndex = parseInt(document.getElementById('editIndex').value);
+
+        if (!name || price <= 0) {
+            alert('품목명과 가격을 올바르게 입력해주세요.');
+            return;
+        }
+
+        const itemObj = { name, price };
+
+        if (editIndex > -1) {
+            items[editIndex] = itemObj;
+            document.getElementById('editIndex').value = -1;
+            document.getElementById('addBtn').innerText = '목록에 추가';
+        } else {
+            items.push(itemObj);
+        }
+
+        clearInputs();
+        renderTable();
+        calculate();
+    }
+
+    function editItem(index) {
+        const item = items[index];
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemPrice').value = item.price;
+        document.getElementById('editIndex').value = index;
+        document.getElementById('addBtn').innerText = '수정 완료';
+    }
+
+    function deleteItem(index) {
+        if(confirm('정말 삭제하시겠습니까?')) {
+            items.splice(index, 1);
+            renderTable();
+            calculate();
+        }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('itemList');
+        tbody.innerHTML = '';
+        
+        items.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.price.toLocaleString()}</td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="editItem(${index})">수정</button>
+                    <button class="action-btn delete-btn" onclick="deleteItem(${index})">삭제</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function calculate() {
+        const budget = parseInt(document.getElementById('totalBudget').value) || 0;
+        const totalSpent = items.reduce((sum, item) => sum + item.price, 0);
+        const balance = budget - totalSpent;
+
+        document.getElementById('displayBudget').innerText = budget.toLocaleString();
+        document.getElementById('displayTotal').innerText = totalSpent.toLocaleString();
+        
+        const balanceEl = document.getElementById('displayBalance');
+        balanceEl.innerText = balance.toLocaleString();
+        balanceEl.style.color = balance < 0 ? 'red' : 'blue';
+    }
+
+    function clearInputs() {
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+    }
+</script>
+
+</body>
+</html>
