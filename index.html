@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>장보기 어플</title>
 <style>
-    body, input, button, table, div, span, th, td {
+    /* 모든 글자 크기를 동일하게 설정 */
+    body, input, button, table, div, span, th, td, label {
         font-family: 'Malgun Gothic', sans-serif;
-        font-size: 16px; /* 모든 글자 크기 동일하게 설정 */
+        font-size: 16px; 
+        font-weight: normal;
+    }
+    /* 제목 및 강조 요소만 볼드로 설정 */
+    th, label, .summary, #addBtn {
+        font-weight: bold;
     }
     body {
         padding: 20px;
@@ -27,7 +33,6 @@
     .input-group label {
         display: inline-block;
         width: 80px;
-        font-weight: bold;
     }
     .input-group input {
         padding: 5px;
@@ -59,14 +64,12 @@
     }
     th {
         background-color: #f8f9fa;
-        font-weight: bold;
     }
     .summary {
         margin-top: 20px;
         padding: 15px;
         background-color: #e9ecef;
         border-radius: 4px;
-        font-weight: bold;
         line-height: 1.6;
     }
     .action-btn {
@@ -81,10 +84,14 @@
 
 <div class="container">
     <div style="margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">
-        <label for="totalBudget" style="font-weight: bold;">총 예산 입력 (원): </label>
-        <input type="number" id="totalBudget" placeholder="예: 50000" oninput="calculate()">
+        <label for="totalBudget">총 예산 입력 (원): </label>
+        <input type="number" id="totalBudget" placeholder="예: 50000" oninput="saveBudget(); calculate();">
     </div>
 
+    <div class="input-group">
+        <label for="itemDate">날짜</label>
+        <input type="date" id="itemDate">
+    </div>
     <div class="input-group">
         <label for="itemName">품목명</label>
         <input type="text" id="itemName" placeholder="예: 우유">
@@ -99,6 +106,7 @@
     <table>
         <thead>
             <tr>
+                <th>날짜</th>
                 <th>품목</th>
                 <th>가격</th>
                 <th>관리</th>
@@ -118,17 +126,48 @@
 <script>
     let items = [];
 
+    // 페이지가 처음 열릴 때 저장된 데이터를 자동으로 불러옵니다.
+    window.onload = function() {
+        // 기본 날짜를 오늘로 설정
+        const today = new Date().toISOString().substring(0, 10);
+        document.getElementById('itemDate').value = today;
+
+        // 저장된 총 예산 가져오기
+        const savedBudget = localStorage.getItem('shoppingBudget');
+        if (savedBudget) {
+            document.getElementById('totalBudget').value = savedBudget;
+        }
+
+        // 저장된 장보기 목록 가져오기
+        const savedItems = localStorage.getItem('shoppingItems');
+        if (savedItems) {
+            items = JSON.parse(savedItems);
+            renderTable();
+        }
+        calculate();
+    };
+
+    function saveBudget() {
+        const budget = document.getElementById('totalBudget').value;
+        localStorage.setItem('shoppingBudget', budget);
+    }
+
+    function saveItems() {
+        localStorage.setItem('shoppingItems', JSON.stringify(items));
+    }
+
     function addItem() {
+        const date = document.getElementById('itemDate').value;
         const name = document.getElementById('itemName').value;
         const price = parseInt(document.getElementById('itemPrice').value) || 0;
         const editIndex = parseInt(document.getElementById('editIndex').value);
 
-        if (!name || price <= 0) {
-            alert('품목명과 가격을 올바르게 입력해주세요.');
+        if (!date || !name || price <= 0) {
+            alert('날짜, 품목명, 가격을 올바르게 입력해주세요.');
             return;
         }
 
-        const itemObj = { name, price };
+        const itemObj = { date, name, price };
 
         if (editIndex > -1) {
             items[editIndex] = itemObj;
@@ -139,12 +178,14 @@
         }
 
         clearInputs();
+        saveItems();
         renderTable();
         calculate();
     }
 
     function editItem(index) {
         const item = items[index];
+        document.getElementById('itemDate').value = item.date;
         document.getElementById('itemName').value = item.name;
         document.getElementById('itemPrice').value = item.price;
         document.getElementById('editIndex').value = index;
@@ -154,6 +195,7 @@
     function deleteItem(index) {
         if(confirm('정말 삭제하시겠습니까?')) {
             items.splice(index, 1);
+            saveItems();
             renderTable();
             calculate();
         }
@@ -166,6 +208,7 @@
         items.forEach((item, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td>${item.date}</td>
                 <td>${item.name}</td>
                 <td>${item.price.toLocaleString()}</td>
                 <td>
@@ -191,6 +234,8 @@
     }
 
     function clearInputs() {
+        const today = new Date().toISOString().substring(0, 10);
+        document.getElementById('itemDate').value = today;
         document.getElementById('itemName').value = '';
         document.getElementById('itemPrice').value = '';
     }
